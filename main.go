@@ -89,10 +89,11 @@ func findWirelessIP() (string, net.IP, error) {
 func main() {
 
 	// Argument parsing
-
 	var verbose bool
+    var timeout time.Duration
 	flag.BoolVar(&verbose, "verbose", false, "Increase verbosity")
 	flag.BoolVar(&verbose, "v", false, "Increase verbosity")
+    flag.DurationVar(&timeout, "timeout", 300 * time.Second, "Timeout for HTTP serve, 0 is infinite")
 
 	flag.Parse()
 
@@ -165,10 +166,19 @@ func main() {
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
 	}()
 
-	if verbose {
-		log.Printf("I: serving %s for 60 seconds\n", name)
-	}
-	time.Sleep(60 * time.Second)
+    if timeout > 0 {
+        if verbose {
+            log.Printf("I: serving %s for %s\n", name, timeout)
+        }
+        time.Sleep(timeout)
+    } else {
+        if verbose {
+            log.Printf("I: serving %s for indifinitelly\n", name)
+        }
+        for {
+            time.Sleep(24 * time.Hour)
+        }
+    }
 	log.Printf("I: finished")
 	/*
 	   // TODO: show qrcode
