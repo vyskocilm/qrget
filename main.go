@@ -9,6 +9,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"image"
+	"image/png"
+	"image/draw"
 	"log"
 	"net"
 	"net/http"
@@ -17,15 +20,37 @@ import (
 	"time"
 
 	qrcode "github.com/skip2/go-qrcode"
-	/*
-	   nucular "github.com/aarzilli/nucular"
-	   style "github.com/aarzilli/nucular/style"
-	*/)
+	nucular "github.com/aarzilli/nucular"
+    nstyle "github.com/aarzilli/nucular/style"
+)
 
 type ErrGoget string
 
 func (self ErrGoget) Error() string {
 	return string(self)
+}
+
+// UI model
+type qrgetModel struct {
+	Img *image.RGBA
+}
+
+func newQrgetModel() (qm *qrgetModel) {
+    qm = &qrgetModel{}
+	fh, err := os.Open("download.png")      // fixme, pass []byte
+	if err == nil {
+		defer fh.Close()
+		img, _ := png.Decode(fh)
+		qm.Img = image.NewRGBA(img.Bounds())
+		draw.Draw(qm.Img, img.Bounds(), img, image.Point{}, draw.Src)
+	}
+
+    return qm
+}
+
+func (qm *qrgetModel) updatefn(w *nucular.Window) {
+	w.RowScaled(256).StaticScaled(256)
+    w.Image(qm.Img)
 }
 
 //  find address of wireless interface or error
@@ -86,8 +111,23 @@ func findWirelessIP() (string, net.IP, error) {
 	return wlan, ip, nil
 }
 
-func main() {
+func drawqr(w *nucular.Window) {
+    //keybindings(w)
+    fh, err := os.Open("download.png")
+    if err != nil {
+        w.Row(25).Dynamic(1)
+        w.Label("could not load qrcode image", "LC")
+    } else {
+        defer fh.Close()
+        img, _ := png.Decode(fh)
+        img_rgba := image.NewRGBA(img.Bounds())
+        draw.Draw(img_rgba, img.Bounds(), img, image.Point{}, draw.Src)
+		w.Image(img_rgba)
+    }
 
+}
+
+func main() {
 	// Argument parsing
 	var verbose bool
     var timeout time.Duration
@@ -149,10 +189,11 @@ func main() {
 		if verbose {
 			log.Println("I: 'download.png' saved, opening via xdg-open")
 		}
+        /*
 		_, err := os.StartProcess("/usr/bin/xdg-open", []string{"xdg-open", "download.png"}, &os.ProcAttr{Dir: ".", Files: []*os.File{os.Stdin, os.Stdout, os.Stderr}})
 		if err != nil {
 			panic(err)
-		}
+		}*/
 	}()
 
 	// run HTTP server to serve the file
@@ -165,6 +206,14 @@ func main() {
 
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
 	}()
+
+    go func() {
+        qm := newQrgetModel()
+
+        wnd := nucular.NewMasterWindow(0, "Title", qm.updatefn)
+        wnd.SetStyle(nstyle.FromTheme(nstyle.DefaultTheme, 1.0))
+        wnd.Main()
+    }()
 
     if timeout > 0 {
         if verbose {
@@ -180,10 +229,4 @@ func main() {
         }
     }
 	log.Printf("I: finished")
-	/*
-	   // TODO: show qrcode
-	   wnd := nucular.NewMasterWindow(0, "Title")
-	   wnd.SetStyle(style.FromTheme(nucular.DarkTheme, 1.0))
-	   wnd.Main()
-	*/
 }
