@@ -105,7 +105,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	log.Println("I: 'download.png' saved, please open it via different app")
+    go func() {
+        log.Println("I: 'download.png' saved, opening via xdg-open")
+        _, err := os.StartProcess("/usr/bin/xdg-open", []string {"xdg-open", "download.png"}, &os.ProcAttr{Dir:".", Files:  []*os.File{os.Stdin, os.Stdout, os.Stderr}})
+        if err != nil {
+            panic(err)
+        }
+    }()
 
 	// run HTTP server to serve the file
 	// TODO: gracefull shutdow nwhen file was downloaded
