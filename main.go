@@ -1,4 +1,4 @@
-// 
+//
 //  qrget: simple download tool using QR code
 //  (c) 2018 michal vyskocil mail-starts-with-g com
 //  licensed under 3 Clause BSD License
@@ -7,6 +7,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -87,16 +88,54 @@ func findWirelessIP() (string, net.IP, error) {
 
 func main() {
 
+	// Argument parsing
+
+	var verbose bool
+	flag.BoolVar(&verbose, "verbose", false, "Increase verbosity")
+	flag.BoolVar(&verbose, "v", false, "Increase verbosity")
+
+	flag.Parse()
+
+	var dir_mode bool
+	var name string // file or directory name
+	var err error
+	switch len(flag.Args()) {
+	case 0:
+		dir_mode = true
+		name, err = os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+	case 1:
+		name = flag.Args()[0]
+	default:
+		log.Fatal("Serving more than one file is not yet supported")
+	}
+
+	if verbose {
+		if dir_mode {
+			log.Printf("I: serving files from directory '%s'", name)
+		} else {
+			log.Printf("I: serving file '%s'", name)
+		}
+	}
+
+	if dir_mode {
+		log.Fatal("Directory mode is not yet implemented")
+	}
+
 	// detect local wlan interface
-	name, ip, err := findWirelessIP()
+	wlan_name, ip, err := findWirelessIP()
 	if err != nil {
 		panic(err)
 	}
-	// TODO: command line parsing, export the file (or dir?)
-	file := "main.go"
-	port := 8042
-	url := fmt.Sprintf("http://%s:%d/%s", ip, port, file)
-	log.Printf("I: name=\"%s\", ip=%s, url=%s\n", name, ip, url)
+
+	// generate url
+	port := 8042 // TODO: generate randomized ports
+	url := fmt.Sprintf("http://%s:%d/%s", ip, port, name)
+	if verbose {
+		log.Printf("I: wlan=\"%s\", ip=%s, url=%s\n", wlan_name, ip, url)
+	}
 
 	// TODO: test too long QR codes
 	// generate QR code
@@ -105,28 +144,32 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-    go func() {
-        log.Println("I: 'download.png' saved, opening via xdg-open")
-        _, err := os.StartProcess("/usr/bin/xdg-open", []string {"xdg-open", "download.png"}, &os.ProcAttr{Dir:".", Files:  []*os.File{os.Stdin, os.Stdout, os.Stderr}})
-        if err != nil {
-            panic(err)
-        }
-    }()
+	go func() {
+		if verbose {
+			log.Println("I: 'download.png' saved, opening via xdg-open")
+		}
+		_, err := os.StartProcess("/usr/bin/xdg-open", []string{"xdg-open", "download.png"}, &os.ProcAttr{Dir: ".", Files: []*os.File{os.Stdin, os.Stdout, os.Stderr}})
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	// run HTTP server to serve the file
 	// TODO: gracefull shutdow nwhen file was downloaded
 	// TODO: look here - https://stackoverflow.com/questions/39320025/how-to-stop-http-listenandserve
 	go func() {
-		http.HandleFunc(fmt.Sprintf("/%s", file), func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, file)
+		http.HandleFunc(fmt.Sprintf("/%s", name), func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, name)
 		})
 
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
 	}()
 
-    log.Printf("I: serving %s for 60 seconds\n", file)
+	if verbose {
+		log.Printf("I: serving %s for 60 seconds\n", name)
+	}
 	time.Sleep(60 * time.Second)
-    log.Printf("I: finished")
+	log.Printf("I: finished")
 	/*
 	   // TODO: show qrcode
 	   wnd := nucular.NewMasterWindow(0, "Title")
