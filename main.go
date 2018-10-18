@@ -156,14 +156,10 @@ func main() {
 
 	if verbose {
 		if dir_mode {
-			log.Printf("I: serving files from directory '%s'", name)
+			log.Printf("I: serving directory '%s'", name)
 		} else {
 			log.Printf("I: serving file '%s'", name)
 		}
-	}
-
-	if dir_mode {
-		log.Fatal("Directory mode is not yet implemented")
 	}
 
 	// detect local wlan interface
@@ -174,7 +170,7 @@ func main() {
 
 	// generate url
 	port := 8042 // TODO: generate randomized ports
-	url := fmt.Sprintf("http://%s:%d/%s", ip, port, name)
+	url := fmt.Sprintf("http://%s:%d/", ip, port)
 	if verbose {
 		log.Printf("I: wlan=\"%s\", ip=%s, url=%s\n", wlan_name, ip, url)
 	}
@@ -190,11 +186,6 @@ func main() {
 		if verbose {
 			log.Println("I: 'download.png' saved, opening via xdg-open")
 		}
-        /*
-		_, err := os.StartProcess("/usr/bin/xdg-open", []string{"xdg-open", "download.png"}, &os.ProcAttr{Dir: ".", Files: []*os.File{os.Stdin, os.Stdout, os.Stderr}})
-		if err != nil {
-			panic(err)
-		}*/
 	}()
 
     // channel used by several coroutines to notify that we are about end
@@ -205,11 +196,15 @@ func main() {
 	// TODO: gracefull shutdow nwhen file was downloaded
 	// TODO: look here - https://stackoverflow.com/questions/39320025/how-to-stop-http-listenandserve
 	go func() {
-		http.HandleFunc(fmt.Sprintf("/%s", name), func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, name)
-		})
-
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+        ports := fmt.Sprintf(":%d", port)
+        if dir_mode {
+            http.Handle("/", http.FileServer(http.Dir(name)))
+        } else {
+            http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+                http.ServeFile(w, r, name)
+            })
+        }
+        log.Fatal(http.ListenAndServe(ports, nil))
 	}()
 
     qm := newQrgetModel()
@@ -253,5 +248,7 @@ func main() {
     }
 
     wnd.Close()
-	log.Printf("I: finished")
+    if verbose {
+        log.Printf("I: finished")
+    }
 }
