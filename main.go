@@ -112,6 +112,7 @@ func findWirelessIP() (string, net.IP, error) {
 }
 
 func drawqr(w *nucular.Window) {
+
     //keybindings(w)
     fh, err := os.Open("download.png")
     if err != nil {
@@ -196,6 +197,10 @@ func main() {
 		}*/
 	}()
 
+    // channel used by several coroutines to notify that we are about end
+    end_chan := make(chan bool, 1)
+
+    // 1. HTTP Server goroutine
 	// run HTTP server to serve the file
 	// TODO: gracefull shutdow nwhen file was downloaded
 	// TODO: look here - https://stackoverflow.com/questions/39320025/how-to-stop-http-listenandserve
@@ -211,22 +216,42 @@ func main() {
 
     wnd := nucular.NewMasterWindowSize(0, url, image.Point{276, 280}, qm.updatefn)
     wnd.SetStyle(nstyle.FromTheme(nstyle.DefaultTheme, 1.0))
-    go func() {
-        wnd.Main()
-    }()
 
-    if timeout > 0 {
-        if verbose {
-            log.Printf("I: serving %s for %s\n", name, timeout)
-        }
-        time.Sleep(timeout)
-    } else {
-        if verbose {
-            log.Printf("I: serving %s for indifinitelly\n", name)
-        }
+    // 2. GUI goroutine
+    go func(ec chan<- bool) {
+        wnd.Main()
         for {
-            time.Sleep(24 * time.Hour)
+            if wnd.Closed() {
+                ec <- true
+                break
+            }
+            time.Sleep(500 * time.Millisecond)
         }
+    }(end_chan)
+
+    // 3. Timeout goroutine
+    go func(ec chan<- bool) {
+        if timeout > 0 {
+            if verbose {
+                log.Printf("I: serving %s for %s\n", name, timeout)
+            }
+            time.Sleep(timeout)
+        } else {
+            if verbose {
+                log.Printf("I: serving %s for indifinitelly\n", name)
+            }
+            for {
+                time.Sleep(24 * time.Hour)
+            }
+        }
+        ec <- true
+    }(end_chan)
+
+    select {
+    case <-end_chan:
+        break;
     }
+
+    wnd.Close()
 	log.Printf("I: finished")
 }
