@@ -10,8 +10,8 @@ import (
 	"flag"
 	"fmt"
 	"image"
-	"image/png"
 	"image/draw"
+	"image/png"
 	"log"
 	"net"
 	"net/http"
@@ -19,9 +19,9 @@ import (
 	"runtime"
 	"time"
 
-	qrcode "github.com/skip2/go-qrcode"
 	nucular "github.com/aarzilli/nucular"
-    nstyle "github.com/aarzilli/nucular/style"
+	nstyle "github.com/aarzilli/nucular/style"
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 type ErrGoget string
@@ -36,8 +36,8 @@ type qrgetModel struct {
 }
 
 func newQrgetModel() (qm *qrgetModel) {
-    qm = &qrgetModel{}
-	fh, err := os.Open("download.png")      // fixme, pass []byte
+	qm = &qrgetModel{}
+	fh, err := os.Open("download.png") // fixme, pass []byte
 	if err == nil {
 		defer fh.Close()
 		img, _ := png.Decode(fh)
@@ -45,12 +45,12 @@ func newQrgetModel() (qm *qrgetModel) {
 		draw.Draw(qm.Img, img.Bounds(), img, image.Point{}, draw.Src)
 	}
 
-    return qm
+	return qm
 }
 
 func (qm *qrgetModel) updatefn(w *nucular.Window) {
 	w.RowScaled(256).StaticScaled(256)
-    w.Image(qm.Img)
+	w.Image(qm.Img)
 }
 
 //  find address of wireless interface or error
@@ -113,28 +113,28 @@ func findWirelessIP() (string, net.IP, error) {
 
 func drawqr(w *nucular.Window) {
 
-    //keybindings(w)
-    fh, err := os.Open("download.png")
-    if err != nil {
-        w.Row(25).Dynamic(1)
-        w.Label("could not load qrcode image", "LC")
-    } else {
-        defer fh.Close()
-        img, _ := png.Decode(fh)
-        img_rgba := image.NewRGBA(img.Bounds())
-        draw.Draw(img_rgba, img.Bounds(), img, image.Point{}, draw.Src)
+	//keybindings(w)
+	fh, err := os.Open("download.png")
+	if err != nil {
+		w.Row(25).Dynamic(1)
+		w.Label("could not load qrcode image", "LC")
+	} else {
+		defer fh.Close()
+		img, _ := png.Decode(fh)
+		img_rgba := image.NewRGBA(img.Bounds())
+		draw.Draw(img_rgba, img.Bounds(), img, image.Point{}, draw.Src)
 		w.Image(img_rgba)
-    }
+	}
 
 }
 
 func main() {
 	// Argument parsing
 	var verbose bool
-    var timeout time.Duration
+	var timeout time.Duration
 	flag.BoolVar(&verbose, "verbose", false, "Increase verbosity")
 	flag.BoolVar(&verbose, "v", false, "Increase verbosity")
-    flag.DurationVar(&timeout, "timeout", 300 * time.Second, "Timeout for HTTP serve, 0 is infinite")
+	flag.DurationVar(&timeout, "timeout", 300*time.Second, "Timeout for HTTP serve, 0 is infinite")
 
 	flag.Parse()
 
@@ -188,67 +188,67 @@ func main() {
 		}
 	}()
 
-    // channel used by several coroutines to notify that we are about end
-    end_chan := make(chan bool, 1)
+	// channel used by several coroutines to notify that we are about end
+	end_chan := make(chan bool, 1)
 
-    // 1. HTTP Server goroutine
+	// 1. HTTP Server goroutine
 	// run HTTP server to serve the file
 	// TODO: gracefull shutdow nwhen file was downloaded
 	// TODO: look here - https://stackoverflow.com/questions/39320025/how-to-stop-http-listenandserve
 	go func() {
-        ports := fmt.Sprintf(":%d", port)
-        if dir_mode {
-            http.Handle("/", http.FileServer(http.Dir(name)))
-        } else {
-            http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-                http.ServeFile(w, r, name)
-            })
-        }
-        log.Fatal(http.ListenAndServe(ports, nil))
+		ports := fmt.Sprintf(":%d", port)
+		if dir_mode {
+			http.Handle("/", http.FileServer(http.Dir(name)))
+		} else {
+			http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+				http.ServeFile(w, r, name)
+			})
+		}
+		log.Fatal(http.ListenAndServe(ports, nil))
 	}()
 
-    qm := newQrgetModel()
+	qm := newQrgetModel()
 
-    wnd := nucular.NewMasterWindowSize(0, url, image.Point{276, 280}, qm.updatefn)
-    wnd.SetStyle(nstyle.FromTheme(nstyle.DefaultTheme, 1.0))
+	wnd := nucular.NewMasterWindowSize(0, url, image.Point{276, 280}, qm.updatefn)
+	wnd.SetStyle(nstyle.FromTheme(nstyle.DefaultTheme, 1.0))
 
-    // 2. GUI goroutine
-    go func(ec chan<- bool) {
-        wnd.Main()
-        for {
-            if wnd.Closed() {
-                ec <- true
-                break
-            }
-            time.Sleep(500 * time.Millisecond)
-        }
-    }(end_chan)
+	// 2. GUI goroutine
+	go func(ec chan<- bool) {
+		wnd.Main()
+		for {
+			if wnd.Closed() {
+				ec <- true
+				break
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+	}(end_chan)
 
-    // 3. Timeout goroutine
-    go func(ec chan<- bool) {
-        if timeout > 0 {
-            if verbose {
-                log.Printf("I: serving %s for %s\n", name, timeout)
-            }
-            time.Sleep(timeout)
-        } else {
-            if verbose {
-                log.Printf("I: serving %s for indifinitelly\n", name)
-            }
-            for {
-                time.Sleep(24 * time.Hour)
-            }
-        }
-        ec <- true
-    }(end_chan)
+	// 3. Timeout goroutine
+	go func(ec chan<- bool) {
+		if timeout > 0 {
+			if verbose {
+				log.Printf("I: serving %s for %s\n", name, timeout)
+			}
+			time.Sleep(timeout)
+		} else {
+			if verbose {
+				log.Printf("I: serving %s for indifinitelly\n", name)
+			}
+			for {
+				time.Sleep(24 * time.Hour)
+			}
+		}
+		ec <- true
+	}(end_chan)
 
-    select {
-    case <-end_chan:
-        break;
-    }
+	select {
+	case <-end_chan:
+		break
+	}
 
-    wnd.Close()
-    if verbose {
-        log.Printf("I: finished")
-    }
+	wnd.Close()
+	if verbose {
+		log.Printf("I: finished")
+	}
 }
