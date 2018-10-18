@@ -6,7 +6,7 @@ missing NFC (I am watching you Xiaomi) or USB cables required.
 
 **Warning:** `qrcode` is in development mode, not yet user friendly, not
 working elsewhere than on Linux (rely on `sysfs`), can't handle command line
-argument and do not have GUI. Please be patient or send pull requests (it is
+argument. Please be patient or send pull requests (it is
 BSD licensed)
 
 ## How it works
