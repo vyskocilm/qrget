@@ -207,11 +207,11 @@ func main() {
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
 	}()
 
-    go func() {
-        qm := newQrgetModel()
+    qm := newQrgetModel()
 
-        wnd := nucular.NewMasterWindow(0, "Title", qm.updatefn)
-        wnd.SetStyle(nstyle.FromTheme(nstyle.DefaultTheme, 1.0))
+    wnd := nucular.NewMasterWindowSize(0, url, image.Point{276, 280}, qm.updatefn)
+    wnd.SetStyle(nstyle.FromTheme(nstyle.DefaultTheme, 1.0))
+    go func() {
         wnd.Main()
     }()
 
