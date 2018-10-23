@@ -19,6 +19,7 @@ import (
 	"runtime"
 	"time"
 
+	freeport "github.com/phayes/freeport"
 	nucular "github.com/aarzilli/nucular"
 	nstyle "github.com/aarzilli/nucular/style"
 	qrcode "github.com/skip2/go-qrcode"
@@ -169,7 +170,10 @@ func main() {
 	}
 
 	// generate url
-	port := 8042 // TODO: generate randomized ports
+	port, err := freeport.GetFreePort()
+	if err != nil {
+		panic(err)
+	}
 	url := fmt.Sprintf("http://%s:%d/", ip, port)
 	if verbose {
 		log.Printf("I: wlan=\"%s\", ip=%s, url=%s\n", wlan_name, ip, url)
