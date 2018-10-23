@@ -54,9 +54,11 @@ Code reader decodes URL and open web browser to download the file.
 ./qrget README.md
 ```
 2. It shows QQ code
+
 ![QR code](https://raw.githubusercontent.com/vyskocilm/qrget/master/doc/screenshot.png)
 
 3. You open it using your phone and download
+
 ![Download](https://raw.githubusercontent.com/vyskocilm/qrget/master/doc/phone.png)
 
 ## Credits
