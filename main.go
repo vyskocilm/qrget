@@ -26,10 +26,10 @@ import (
 	qrcode "github.com/skip2/go-qrcode"
 )
 
-type ErrGoget string
+type errQqget string
 
-func (self ErrGoget) Error() string {
-	return string(self)
+func (e errQqget) Error() string {
+	return string(e)
 }
 
 // UI model
@@ -60,7 +60,7 @@ func (qm *qrgetModel) updatefn(w *nucular.Window) {
 func findWirelessIP() (string, net.IP, error) {
 	// TODO: use build time way - https://stackoverflow.com/questions/19847594/how-to-reliably-detect-os-platform-in-go
 	if runtime.GOOS != "linux" {
-		return "", nil, ErrGoget("Support of other OSes than Linux is not (yet) supported")
+		return "", nil, errQqget("Support of other OSes than Linux is not (yet) supported")
 	}
 
 	ifaces, err := net.Interfaces()
@@ -70,17 +70,17 @@ func findWirelessIP() (string, net.IP, error) {
 
 	var ip net.IP
 	var wlan string
-	wlan_found := false
+	wlanFound := false
 	for _, iface := range ifaces {
 		fi, err := os.Lstat(fmt.Sprintf("/sys/class/net/%s/wireless/", iface.Name))
 		if err != nil {
 			continue
 		}
 		if fi.Mode().IsDir() {
-			if wlan_found {
-				return "", nil, ErrGoget("Support for more than one wlan interface is not implemented")
+			if wlanFound {
+				return "", nil, errQqget("Support for more than one wlan interface is not implemented")
 			}
-			wlan_found = true
+			wlanFound = true
 			wlan = iface.Name
 
 			// find ip address
@@ -103,8 +103,8 @@ func findWirelessIP() (string, net.IP, error) {
 
 		}
 	}
-	if !wlan_found {
-		return "", nil, ErrGoget("Support for non wlan interface is not implemented")
+	if !wlanFound {
+		return "", nil, errQqget("Support for non wlan interface is not implemented")
 	}
 
 	return wlan, ip, nil
@@ -120,9 +120,9 @@ func drawqr(w *nucular.Window) {
 	} else {
 		defer fh.Close()
 		img, _ := png.Decode(fh)
-		img_rgba := image.NewRGBA(img.Bounds())
-		draw.Draw(img_rgba, img.Bounds(), img, image.Point{}, draw.Src)
-		w.Image(img_rgba)
+		imgRgba := image.NewRGBA(img.Bounds())
+		draw.Draw(imgRgba, img.Bounds(), img, image.Point{}, draw.Src)
+		w.Image(imgRgba)
 	}
 
 }
@@ -137,12 +137,12 @@ func main() {
 
 	flag.Parse()
 
-	var dir_mode bool
+	var dirMode bool
 	var name string // file or directory name
 	var err error
 	switch len(flag.Args()) {
 	case 0:
-		dir_mode = true
+		dirMode = true
 		name, err = os.Getwd()
 		if err != nil {
 			panic(err)
@@ -154,7 +154,7 @@ func main() {
 	}
 
 	if verbose {
-		if dir_mode {
+		if dirMode {
 			log.Printf("I: serving directory '%s'", name)
 		} else {
 			log.Printf("I: serving file '%s'", name)
@@ -162,7 +162,7 @@ func main() {
 	}
 
 	// detect local wlan interface
-	wlan_name, ip, err := findWirelessIP()
+	wlanName, ip, err := findWirelessIP()
 	if err != nil {
 		panic(err)
 	}
@@ -174,7 +174,7 @@ func main() {
 	}
 	url := fmt.Sprintf("http://%s:%d/", ip, port)
 	if verbose {
-		log.Printf("I: wlan=\"%s\", ip=%s, url=%s\n", wlan_name, ip, url)
+		log.Printf("I: wlan=\"%s\", ip=%s, url=%s\n", wlanName, ip, url)
 	}
 
 	// TODO: test too long QR codes
@@ -186,7 +186,7 @@ func main() {
 	}
 
 	// channel used by several coroutines to notify that we are about end
-	end_chan := make(chan bool, 1)
+	endChan := make(chan bool, 1)
 
 	// 1. HTTP Server goroutine
 	// run HTTP server to serve the file
@@ -194,7 +194,7 @@ func main() {
 	// TODO: look here - https://stackoverflow.com/questions/39320025/how-to-stop-http-listenandserve
 	go func() {
 		ports := fmt.Sprintf(":%d", port)
-		if dir_mode {
+		if dirMode {
 			http.Handle("/", http.FileServer(http.Dir(name)))
 		} else {
 			http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -219,7 +219,7 @@ func main() {
 			}
 			time.Sleep(500 * time.Millisecond)
 		}
-	}(end_chan)
+	}(endChan)
 
 	// 3. Timeout goroutine
 	go func(ec chan<- bool) {
@@ -237,10 +237,10 @@ func main() {
 			}
 		}
 		ec <- true
-	}(end_chan)
+	}(endChan)
 
 	select {
-	case <-end_chan:
+	case <-endChan:
 		break
 	}
 
