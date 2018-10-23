@@ -7,6 +7,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"image"
@@ -36,15 +37,12 @@ type qrgetModel struct {
 	Img *image.RGBA
 }
 
-func newQrgetModel() (qm *qrgetModel) {
+func newQrgetModel(qr []byte) (qm *qrgetModel) {
 	qm = &qrgetModel{}
-	fh, err := os.Open("download.png") // fixme, pass []byte
-	if err == nil {
-		defer fh.Close()
-		img, _ := png.Decode(fh)
-		qm.Img = image.NewRGBA(img.Bounds())
-		draw.Draw(qm.Img, img.Bounds(), img, image.Point{}, draw.Src)
-	}
+	r := bytes.NewReader(qr)
+	img, _ := png.Decode(r)
+	qm.Img = image.NewRGBA(img.Bounds())
+	draw.Draw(qm.Img, img.Bounds(), img, image.Point{}, draw.Src)
 
 	return qm
 }
@@ -182,15 +180,10 @@ func main() {
 	// TODO: test too long QR codes
 	// generate QR code
 	//png, err := qrcode.Encode(url, qrcode.Medium, 256)
-	err = qrcode.WriteFile(url, qrcode.Medium, 256, "download.png")
+	qr, err := qrcode.Encode(url, qrcode.Medium, 256)
 	if err != nil {
 		panic(err)
 	}
-	go func() {
-		if verbose {
-			log.Println("I: 'download.png' saved, opening via xdg-open")
-		}
-	}()
 
 	// channel used by several coroutines to notify that we are about end
 	end_chan := make(chan bool, 1)
@@ -211,7 +204,7 @@ func main() {
 		log.Fatal(http.ListenAndServe(ports, nil))
 	}()
 
-	qm := newQrgetModel()
+	qm := newQrgetModel(qr)
 
 	wnd := nucular.NewMasterWindowSize(0, url, image.Point{276, 280}, qm.updatefn)
 	wnd.SetStyle(nstyle.FromTheme(nstyle.DefaultTheme, 1.0))
