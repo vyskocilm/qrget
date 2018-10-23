@@ -1,4 +1,4 @@
-# qrget
+# qrget ![travis](https://travis-ci.org/vyskocilm/qrget.svg?branch=master)
 
 Simple PC/Laptop phone/tablet download tool using QR Codes and HTTP protocol.
 No external tools on your mobile device are needed, no setup of Bluetooth or
