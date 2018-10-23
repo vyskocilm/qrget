@@ -49,6 +49,16 @@ It is stupid simple. `qrcode` generates and encodes URL to download the file
 with WLAN address of main computer and run HTTP server serving that file. QR
 Code reader decodes URL and open web browser to download the file.
 
+1. Run qrget
+```
+./qrget README.md
+```
+2. It shows QQ code
+![QR code](https://raw.githubusercontent.com/vyskocilm/qrget/master/doc/screenshot.png)
+
+3. You open it using your phone and download
+![Download](https://raw.githubusercontent.com/vyskocilm/qrget/master/doc/phone.png)
+
 ## Credits
  * [ASCII Art Laptop](http://ascii.co.uk/art/laptop)
  * [ASCII Art Apple logo](https://www.asciiart.eu/computers/apple)
