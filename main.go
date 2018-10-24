@@ -30,19 +30,21 @@ func (e errQqget) Error() string {
 	return string(e)
 }
 
-// UI model
+// App model
 type qrgetModel struct {
+	port int
+	dirMode bool
+	name string
+	verbose bool
 	Img *image.RGBA
 }
 
-func newQrgetModel(qr []byte) (qm *qrgetModel) {
-	qm = &qrgetModel{}
+// save qr code
+func (qm *qrgetModel) qr(qr []byte) {
 	r := bytes.NewReader(qr)
 	img, _ := png.Decode(r)
 	qm.Img = image.NewRGBA(img.Bounds())
 	draw.Draw(qm.Img, img.Bounds(), img, image.Point{}, draw.Src)
-
-	return qm
 }
 
 func (qm *qrgetModel) updatefn(w *nucular.Window) {
@@ -51,15 +53,15 @@ func (qm *qrgetModel) updatefn(w *nucular.Window) {
 }
 
 // with help of https://stackoverflow.com/questions/39320025/how-to-stop-http-listenandserve
-func startHttpServer(iport int, dirMode bool, name string) *http.Server {
-	port := fmt.Sprintf(":%d", iport)
+func (qm *qrgetModel) startHttpServer() *http.Server {
+	port := fmt.Sprintf(":%d", qm.port)
 	srv := &http.Server{Addr: port}
 
-	if dirMode {
-		http.Handle("/", http.FileServer(http.Dir(name)))
+	if qm.dirMode {
+		http.Handle("/", http.FileServer(http.Dir(qm.name)))
 	} else {
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, name)
+			http.ServeFile(w, r, qm.name)
 		})
 	}
 	go func() {
@@ -106,6 +108,8 @@ func main() {
 		}
 	}
 
+	qm := &qrgetModel{dirMode: dirMode, name: name, verbose: verbose}
+
 	// detect local wlan interface
 	wlanName, ip, err := findWirelessIP()
 	if err != nil {
@@ -117,6 +121,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	qm.port = port
 	url := fmt.Sprintf("http://%s:%d/", ip, port)
 	if verbose {
 		log.Printf("I: wlan=\"%s\", ip=%s, url=%s\n", wlanName, ip, url)
@@ -135,9 +140,9 @@ func main() {
 
 	// 1. HTTP Server goroutine
 	// run HTTP server to serve the file
-	srv := startHttpServer(port, dirMode, name)
+	srv := qm.startHttpServer()
 
-	qm := newQrgetModel(qr)
+	qm.qr(qr)
 
 	wnd := nucular.NewMasterWindowSize(0, url, image.Point{276, 280}, qm.updatefn)
 	wnd.SetStyle(nstyle.FromTheme(nstyle.DefaultTheme, 1.0))
