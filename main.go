@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"net"
 
 	nucular "github.com/aarzilli/nucular"
 	nstyle "github.com/aarzilli/nucular/style"
@@ -36,15 +37,27 @@ type qrgetModel struct {
 	dirMode bool
 	name string
 	verbose bool
+	url string
+	srv *http.Server
+	wnd nucular.MasterWindow
 	Img *image.RGBA
 }
 
-// save qr code
-func (qm *qrgetModel) qr(qr []byte) {
+// save qr code to image
+func (qm *qrgetModel) qr(wlanName string, ip net.IP) error {
+	qm.url = fmt.Sprintf("http://%s:%d/", ip, qm.port)
+	if qm.verbose {
+		log.Printf("I: wlan=\"%s\", ip=%s, url=%s\n", wlanName, ip, qm.url)
+	}
+	qr, err := qrcode.Encode(qm.url, qrcode.Medium, 256)
+	if err != nil {
+		return err
+	}
 	r := bytes.NewReader(qr)
 	img, _ := png.Decode(r)
 	qm.Img = image.NewRGBA(img.Bounds())
 	draw.Draw(qm.Img, img.Bounds(), img, image.Point{}, draw.Src)
+	return nil
 }
 
 func (qm *qrgetModel) updatefn(w *nucular.Window) {
@@ -53,9 +66,12 @@ func (qm *qrgetModel) updatefn(w *nucular.Window) {
 }
 
 // with help of https://stackoverflow.com/questions/39320025/how-to-stop-http-listenandserve
-func (qm *qrgetModel) startHttpServer() *http.Server {
+func (qm *qrgetModel) startHttpServer() {
+	if qm.port == 0 {
+		panic("port == 0")
+	}
 	port := fmt.Sprintf(":%d", qm.port)
-	srv := &http.Server{Addr: port}
+	qm.srv = &http.Server{Addr: port}
 
 	if qm.dirMode {
 		http.Handle("/", http.FileServer(http.Dir(qm.name)))
@@ -65,13 +81,26 @@ func (qm *qrgetModel) startHttpServer() *http.Server {
 		})
 	}
 	go func() {
-		if err := srv.ListenAndServe(); err != nil {
+		if err := qm.srv.ListenAndServe(); err != nil {
 			// cannot panic, because this probably is an intentional close
-			log.Printf("Httpserver: ListenAndServe() error: %s", err)
+			if err.Error() != "http: Server closed" {
+				log.Printf("Httpserver: ListenAndServe() error: %s", err)
+			}
 		}
 	}()
+}
 
-	return srv
+func (qm *qrgetModel) masterWindow() nucular.MasterWindow {
+	qm.wnd = nucular.NewMasterWindowSize(0, qm.url, image.Point{276, 280}, qm.updatefn)
+	qm.wnd.SetStyle(nstyle.FromTheme(nstyle.DefaultTheme, 1.0))
+	return qm.wnd
+}
+
+func (qm *qrgetModel) closeAll() {
+	qm.wnd.Close()
+	if err := qm.srv.Shutdown(nil); err != nil {
+		panic(err) // failure/timeout shutting down the server gracefully
+	}
 }
 
 func main() {
@@ -108,7 +137,6 @@ func main() {
 		}
 	}
 
-	qm := &qrgetModel{dirMode: dirMode, name: name, verbose: verbose}
 
 	// detect local wlan interface
 	wlanName, ip, err := findWirelessIP()
@@ -121,16 +149,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	qm.port = port
-	url := fmt.Sprintf("http://%s:%d/", ip, port)
-	if verbose {
-		log.Printf("I: wlan=\"%s\", ip=%s, url=%s\n", wlanName, ip, url)
-	}
+	qm := &qrgetModel{
+		dirMode: dirMode,
+		name: name,
+		verbose: verbose,
+		port: port}
 
-	// TODO: test too long QR codes
 	// generate QR code
-	//png, err := qrcode.Encode(url, qrcode.Medium, 256)
-	qr, err := qrcode.Encode(url, qrcode.Medium, 256)
+	err = qm.qr(wlanName, ip)
 	if err != nil {
 		panic(err)
 	}
@@ -140,13 +166,9 @@ func main() {
 
 	// 1. HTTP Server goroutine
 	// run HTTP server to serve the file
-	srv := qm.startHttpServer()
+	qm.startHttpServer()
 
-	qm.qr(qr)
-
-	wnd := nucular.NewMasterWindowSize(0, url, image.Point{276, 280}, qm.updatefn)
-	wnd.SetStyle(nstyle.FromTheme(nstyle.DefaultTheme, 1.0))
-
+	wnd := qm.masterWindow()
 	// 2. GUI goroutine
 	go func(ec chan<- bool) {
 		wnd.Main()
@@ -180,10 +202,7 @@ func main() {
 	// wait until end
 	<-endChan
 
-	wnd.Close()
-	if err := srv.Shutdown(nil); err != nil {
-		panic(err) // failure/timeout shutting down the server gracefully
-	}
+	qm.closeAll()
 	if verbose {
 		log.Printf("I: finished")
 	}
