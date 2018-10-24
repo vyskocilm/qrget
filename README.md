@@ -1,4 +1,4 @@
-# qrget [![TravisCI](https://travis-ci.org/vyskocilm/qrget.svg?branch=master)](https://travis-ci.org/vyskocilm/qrget) [![Go Report Card](https://goreportcard.com/badge/github.com/vyskocilm/qrget)](https://goreportcard.com/report/github.com/vyskocilm/qrget) [![GolangCI](https://golangci.com/badges/github.com/vyskocilm/qrget.svg)](https://golangci.com/r/vyskocilm/qrget)
+# qrget [![TravisCI](https://travis-ci.org/vyskocilm/qrget.svg?branch=master)](https://travis-ci.org/vyskocilm/qrget) [![Go Report Card](https://goreportcard.com/badge/github.com/vyskocilm/qrget)](https://goreportcard.com/report/github.com/vyskocilm/qrget) [![GolangCI](https://golangci.com/badges/github.com/vyskocilm/qrget.svg)](https://golangci.com/r/vyskocilm/qrget) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg?style=flat)](https://raw.githubusercontent.com/vyskocilm/qrget/master/LICENSE)
 
 Simple PC/Laptop phone/tablet download tool using QR Codes and HTTP protocol.
 No external tools on your mobile device are needed, no setup of Bluetooth or
