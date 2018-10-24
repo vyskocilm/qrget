@@ -50,6 +50,28 @@ func (qm *qrgetModel) updatefn(w *nucular.Window) {
 	w.Image(qm.Img)
 }
 
+// with help of https://stackoverflow.com/questions/39320025/how-to-stop-http-listenandserve
+func startHttpServer(iport int, dirMode bool, name string) *http.Server {
+	port := fmt.Sprintf(":%d", iport)
+	srv := &http.Server{Addr: port}
+
+	if dirMode {
+		http.Handle("/", http.FileServer(http.Dir(name)))
+	} else {
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, name)
+		})
+	}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil {
+			// cannot panic, because this probably is an intentional close
+			log.Printf("Httpserver: ListenAndServe() error: %s", err)
+		}
+	}()
+
+	return srv
+}
+
 func main() {
 	// Argument parsing
 	var verbose bool
@@ -113,19 +135,7 @@ func main() {
 
 	// 1. HTTP Server goroutine
 	// run HTTP server to serve the file
-	// TODO: gracefull shutdow nwhen file was downloaded
-	// TODO: look here - https://stackoverflow.com/questions/39320025/how-to-stop-http-listenandserve
-	go func() {
-		ports := fmt.Sprintf(":%d", port)
-		if dirMode {
-			http.Handle("/", http.FileServer(http.Dir(name)))
-		} else {
-			http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-				http.ServeFile(w, r, name)
-			})
-		}
-		log.Fatal(http.ListenAndServe(ports, nil))
-	}()
+	srv := startHttpServer(port, dirMode, name)
 
 	qm := newQrgetModel(qr)
 
@@ -166,6 +176,9 @@ func main() {
 	<-endChan
 
 	wnd.Close()
+	if err := srv.Shutdown(nil); err != nil {
+		panic(err) // failure/timeout shutting down the server gracefully
+	}
 	if verbose {
 		log.Printf("I: finished")
 	}
