@@ -110,23 +110,6 @@ func findWirelessIP() (string, net.IP, error) {
 	return wlan, ip, nil
 }
 
-func drawqr(w *nucular.Window) {
-
-	//keybindings(w)
-	fh, err := os.Open("download.png")
-	if err != nil {
-		w.Row(25).Dynamic(1)
-		w.Label("could not load qrcode image", "LC")
-	} else {
-		defer fh.Close()
-		img, _ := png.Decode(fh)
-		imgRgba := image.NewRGBA(img.Bounds())
-		draw.Draw(imgRgba, img.Bounds(), img, image.Point{}, draw.Src)
-		w.Image(imgRgba)
-	}
-
-}
-
 func main() {
 	// Argument parsing
 	var verbose bool
@@ -239,10 +222,8 @@ func main() {
 		ec <- true
 	}(endChan)
 
-	select {
-	case <-endChan:
-		break
-	}
+	// wait until end
+	<-endChan
 
 	wnd.Close()
 	if verbose {
