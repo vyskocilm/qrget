@@ -14,10 +14,10 @@ import (
 	"image/draw"
 	"image/png"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"time"
-	"net"
 
 	nucular "github.com/aarzilli/nucular"
 	nstyle "github.com/aarzilli/nucular/style"
@@ -33,14 +33,14 @@ func (e errQqget) Error() string {
 
 // App model
 type qrgetModel struct {
-	port int
+	port    int
 	dirMode bool
-	name string
+	name    string
 	verbose bool
-	url string
-	srv *http.Server
-	wnd nucular.MasterWindow
-	Img *image.RGBA
+	url     string
+	srv     *http.Server
+	wnd     nucular.MasterWindow
+	Img     *image.RGBA
 }
 
 // save qr code to image
@@ -137,7 +137,6 @@ func main() {
 		}
 	}
 
-
 	// detect local wlan interface
 	wlanName, ip, err := findWirelessIP()
 	if err != nil {
@@ -151,9 +150,9 @@ func main() {
 	}
 	qm := &qrgetModel{
 		dirMode: dirMode,
-		name: name,
+		name:    name,
 		verbose: verbose,
-		port: port}
+		port:    port}
 
 	// generate QR code
 	err = qm.qr(wlanName, ip)
