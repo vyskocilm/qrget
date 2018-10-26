@@ -1,24 +1,37 @@
 # source: https://gist.github.com/y0ssar1an/df2dab474520c4086926f672c52db139
-
 sudo: false
 language: go
 
 # Force-enable Go modules. This will be unnecessary when Go 1.12 lands.
 env:
-- GO111MODULE=on
-
-# You don't need to test on very old version of the Go compiler. It's the user's
-# responsibility to keep their compilers up to date.
-go:
-- 1.11.x
-
-# Only clone the most recent commit.
+  - GO111MODULE=on
+matrix:
+  include:
+  - go: 1.x
+    env: LATEST=true
+  - go: tip
+  allow_failures:
+  - go: tip
 git:
   depth: 1
 
+# install gox - tool simplyfing cross platform builds
+before_install:
+  - if [ "${LATEST}" = "true" ]; then go get github.com/mitchellh/gox; fi
 
-# script always runs to completion (set +e). If we have linter issues AND a
-# failing test, we want to see both. Configure golangci-lint with a
-# .golangci.yml file at the top level of your repo.
+install:
+  - #skip
+
 script:
-  - go build                # we have no unit tests atm
+  - go build #we're building twice, move to tests
+  - if [ "${LATEST}" = "true" ]; then gox -os="linux" -arch="amd64" -output="qrget.{{.OS}}.{{.Arch}}" -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ./...; fi
+
+deploy:
+  provider: releases
+  api_key:
+    secure: nzyFF+dQ/3NN/1hnHZlWT5dIEV3Uy/VtJG5uadJPJQQaohNgMQmSrv0kNALiq0OagNUrf9IoDNbLt9LKnRA0NCNH6EyUbeU8UFAw6LKuq05/sahTR1XW2z2LFQjH4WLBGyoVPJhSfNdCiB90c5FJAGK61kUGXU1DnHDHxlX9nOKEUFmLkqOAFQH0rpELtRGX1cXRSD6an6c4N2BGh6TCb5VPD7K6TEGb9En5/7NuzGGT5Tkq10xPVVTzsiiXIx+SV6DLACDfHw7eWCtRc2y7oQkL6sEbqdMv0Bfyz7vqSBu1VuG2oS6s5S2MgX6+QJVnGmhm3/IprOH2XqwsV6MbPt0de+bNvEYLh5aEjdj5wBJHaUN7kFgmzYdH96N6owZMXanzu9n21cx6JzpuDfmzmv1uB4a1Hs3mEM75rkWcW1CZKbACl9Mlg6XP3+BUTluuJYt1qWHXlNoINki5LvwkBnBjsCkN5eO6qdqOmRDZZCm9UQwJdevFjlZn2PuNyTOZNh/d9b1NUtckF+xMKM1f+MsW7ivKQ7Xs7HF+fioP/Ot3372MnRNx+BAUDp2M7jMmwxgkLy6bZByZVUvd9/7bbbVhjcc+gzRzbFHMgsWKhOEcy4A5f3likZCJEJc5wMl+wsfsW8KZK8PKJQtMktzc6qqMejCbpDXSXtTd6c6Ub64=
+  file: qrget.linux.amd64
+  on:
+    repo: vyskocilm/qrget
+    tags: true
+    condition: $LATEST = true
