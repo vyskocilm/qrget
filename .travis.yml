@@ -23,6 +23,7 @@ install:
   - #skip
 
 script:
+  - go get -t -v ./...
   - go build #we're building twice, move to tests
   - if [ "${LATEST}" = "true" ]; then gox -os="linux" -arch="amd64" -output="qrget.{{.OS}}.{{.Arch}}" -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ./...; fi
 
