@@ -4,8 +4,10 @@ Simple PC/Laptop phone/tablet download tool using QR Codes and HTTP protocol.
 No external tools on your mobile device are needed, no setup of Bluetooth or
 missing NFC (I am watching you Xiaomi) or USB cables required.
 
-**Warning:** `qrcode` is in development mode, works only on Linux (rely on `sysfs` to find wlan card).
-Please be patient, send issues or send pull requests (it is BSD licensed)
+## Installation
+Go to [Release page](https://github.com/vyskocilm/qrget/releases/latest) and grab the binary `qrget.linux.amd64`. That's it!
+
+Right now there is no support for other platforms, add [new issue](https://github.com/vyskocilm/qrget/issues) or fill [pull reuqest](https://github.com/vyskocilm/qrget/pulls) if you need to.
 
 ## How it works
 
