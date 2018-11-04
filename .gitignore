@@ -1,1 +1,3 @@
-download.png
+# ignore build artifacts
+qrget
+qrget.linux.amd64
